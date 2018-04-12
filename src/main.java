@@ -1,72 +1,107 @@
-import com.fazecast.jSerialComm.*;
-import okhttp3.*;
-import org.json.JSONException;
-import org.json.JSONObject;
-import java.io.IOException;
+import javafx.animation.AnimationTimer;
+import javafx.application.Application;
+import javafx.geometry.Insets;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 
-public class main {
-    static OkHttpClient client;
+public class main extends Application {
 
-    public static void main (String[] args){
-        client = new OkHttpClient();
-
-        SerialPort port = SerialPort.getCommPorts()[0];
-        port.openPort();
-        port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 100, 0);
-        port.addDataListener(new SerialPortPacketListener() {
-            @Override
-            public int getPacketSize() {
-                return 8;
-            }
-
-            @Override
-            public int getListeningEvents() {
-                return SerialPort.LISTENING_EVENT_DATA_RECEIVED;
-            }
-
-            @Override
-            public void serialEvent(SerialPortEvent serialPortEvent) {
-                byte[] newData = serialPortEvent.getReceivedData();
-                System.out.println("Received data of size: " + newData.length);
-                char[] message = new char[newData.length];
-                for (int i = 0; i < newData.length; ++i)
-                    message[i] = (char)newData[i];
-                String id = new String(newData);
-                System.out.println(id);
-                JSONObject jsonObject = new JSONObject();
-                try {
-                    jsonObject.put("action", "validate");
-                    jsonObject.put("id", id);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-                sendRequest(jsonObject);
-            }
-        });
-
+    public static void main(String[] args) {
+        launch(args);
     }
 
-    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-    private static void sendRequest(JSONObject jsonObject) {
-        Request request = new Request.Builder()
-                .url("http://192.168.0.11/request_handler.php")
-                .post(RequestBody.create(JSON, jsonObject.toString()))
-                .build();
+    private static final int COLUMNS  =   4;
+    private static final int ROWS = 1;
+    private static final int COUNT    =  4;
+    private static final int WIDTH    = 228;
+    private static final int HEIGHT   = 303;
 
-        client.newCall(request).enqueue(new Callback() {
+    private static final Image door = new Image( "file:res/lock-door.png" );
+    private static ImageView imageView = new ImageView(door);
+    Button btnReset;
+    Label lblInfo;
+
+    ImageViewSprite animation = new ImageViewSprite(imageView,
+            new Image("file:res/lock-door.png"),
+            COLUMNS,
+            ROWS,
+            COUNT,
+            WIDTH,
+            HEIGHT,
+            24);
+
+    @Override
+    public void start(Stage theStage)
+    {
+        animation.stop();
+
+        BorderPane border = new BorderPane();
+        border.setTop(addButton());
+        border.setCenter(addDoor());
+        border.setBottom(addLabel());
+
+        SerialComm.initialise();
+        theStage.setTitle( "Door Lock" );
+
+        theStage.setScene(new Scene(new Group(border)));
+        theStage.setWidth(800);
+        theStage.setHeight(600);
+
+        new AnimationTimer()
+        {
             @Override
-            public void onFailure(Call call, IOException e) {
-                e.printStackTrace();
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                try(ResponseBody responseBody = response.body()){
-                    if(!response.isSuccessful()) throw new IOException("unexpected code" + response);
-
-                    System.out.println(responseBody.string());
+            public void handle(long l) {
+                if(SerialComm.isValidResponse()) {
+                    animation.start();
+                    animation.setPlay(true);
+                    lblInfo.setText("Valid key.");
                 }
             }
+        }.start();
+
+        theStage.show();
+    }
+
+    private HBox addButton() {
+        HBox hbox = new HBox();
+        hbox.setPadding(new Insets(15, 12, 15, 350));
+
+        btnReset = new Button();
+        btnReset.setText("Close door");
+        btnReset.setOnAction(actionEvent -> {
+            animation.resetAnimation();
+            animation.stop();
         });
+
+        hbox.getChildren().addAll(btnReset);
+
+        return hbox;
+    }
+
+    private VBox addDoor() {
+        VBox vbox = new VBox();
+        vbox.setPadding(new Insets(100, 0, 0, 280));
+
+        vbox.getChildren().add(imageView);
+
+        return vbox;
+    }
+
+    private HBox addLabel() {
+        HBox hbox = new HBox();
+        hbox.setPadding(new Insets(15, 12, 15, 350));
+
+        lblInfo = new Label("Door locked.");
+        hbox.getChildren().add(lblInfo);
+
+        return hbox;
     }
 }
