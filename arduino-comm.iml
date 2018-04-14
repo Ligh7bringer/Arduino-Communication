@@ -11,5 +11,8 @@
     <orderEntry type="library" name="jSerialComm-2.0.2" level="project" />
     <orderEntry type="library" name="okhttp-3.10.0" level="project" />
     <orderEntry type="library" name="okio-1.14.0" level="project" />
+    <orderEntry type="library" name="slf4j-api-1.7.2" level="project" />
+    <orderEntry type="library" name="bridj-0.7.0" level="project" />
+    <orderEntry type="library" name="webcam-capture-0.3.12" level="project" />
   </component>
 </module>

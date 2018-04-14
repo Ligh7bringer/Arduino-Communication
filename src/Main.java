@@ -11,13 +11,11 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.json.JSONException;
 
-public class main extends Application {
+import java.io.IOException;
 
-    public static void main(String[] args) {
-        launch(args);
-    }
-
+public class Main extends Application {
     private static final int COLUMNS  =   4;
     private static final int ROWS = 1;
     private static final int COUNT    =  4;
@@ -28,6 +26,10 @@ public class main extends Application {
     private static ImageView imageView = new ImageView(door);
     Button btnReset;
     Label lblInfo;
+
+    public static void main(String[] args) throws IOException, JSONException {
+        launch(args);
+    }
 
     ImageViewSprite animation = new ImageViewSprite(imageView,
             new Image("file:res/lock-door.png"),
@@ -48,7 +50,13 @@ public class main extends Application {
         border.setCenter(addDoor());
         border.setBottom(addLabel());
 
-        SerialComm.initialise();
+        try {
+            SerialComm.initialise();
+        } catch (Exception e) {
+            System.out.println("No Arduino detected!");
+            return;
+        }
+
         theStage.setTitle( "Door Lock" );
 
         theStage.setScene(new Scene(new Group(border)));
@@ -67,6 +75,8 @@ public class main extends Application {
             }
         }.start();
 
+        theStage.setOnCloseRequest(windowEvent -> SerialComm.shutDown());
+
         theStage.show();
     }
 
@@ -79,6 +89,7 @@ public class main extends Application {
         btnReset.setOnAction(actionEvent -> {
             animation.resetAnimation();
             animation.stop();
+            lblInfo.setText("Door locked.");
         });
 
         hbox.getChildren().addAll(btnReset);
@@ -104,4 +115,5 @@ public class main extends Application {
 
         return hbox;
     }
+
 }
